@@ -1,0 +1,82 @@
+#include <LiquidCrystal_I2C.h>
+
+int pinEcho = D5;
+int PinTrigger = D4;
+int pinDry = D6;
+int pinBuzzer = D7;
+
+float distance_time=0, distance=0;
+
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PinTrigger,OUTPUT);
+  pinMode(pinEcho,INPUT);
+  pinMode(pinDry,INPUT);
+
+  lcd.init();
+  lcd.clear();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("Smart Bin");
+}
+
+void loop() {
+  ultrasonic();
+  delay(3000);
+}
+
+void ultrasonic()
+{
+  digitalWrite(PinTrigger,LOW);
+  delayMicroseconds(2);
+  digitalWrite(PinTrigger,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(PinTrigger,LOW);
+  delayMicroseconds(2);
+  distance_time=pulseIn(pinEcho,HIGH);
+  distance=distance_time*340/20000;
+
+  float per = 100 - ((distance / 30 )*100);
+
+  if(per >= 0 && per <= 80){
+   lcd.clear();
+   lcd.setCursor(0,0);
+   lcd.print("Bin." + String(per) + "%");
+   soilsensor();
+  }else if(per > 80 && per < 100)
+  {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Bin full." + String(per) + "%");
+    Serial.println("Bin is full." + String(per) + "%");
+    soilsensor();
+    playBuzzer();
+  }
+  else{
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Smart Bin");
+  }
+}
+
+void soilsensor(){
+  int val = digitalRead(pinDry);
+  if (val == 1){
+    lcd.setCursor(0,1);
+    lcd.print("Dry garbage.");
+    Serial.println("Dry garbage.");
+  }
+  else if (val == 0){
+    lcd.setCursor(0,1);
+    lcd.print("Wet garbage.");
+    Serial.println("Wet garbage.");
+  }
+}
+
+void playBuzzer(){
+  tone(pinBuzzer,1000);
+  delay(1000);
+  noTone(pinBuzzer);
+}
